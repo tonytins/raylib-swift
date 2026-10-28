@@ -13,8 +13,15 @@ from raylib's header on its own:
 | `FLAG_VSYNC_HINT \| FLAG_MSAA_4X_HINT` | `[.vsyncHint, .msaa4xHint]` (an `OptionSet`) |
 | `RAYWHITE`, `LIGHTGRAY` (compound-literal macros) | `Color.rayWhite`, `Color.lightGray` |
 | `IsKeyDown(KEY_SPACE)` (takes an `int`) | `IsKeyDown(.space)` |
+| `DrawText(text, x, y, 20, color)` (C `int`, imported as `Int32`) | the same call with `Int` values; `MeasureText` returns `Int` |
+| `Vector2Add(a, Vector2Scale(b, 2))` | `a + b * 2`, plus `Vector2.zero` and `.one`, and the same for `Vector3` |
 
 Function names stay raylib's, so raylib's examples and cheatsheet read the same in Swift.
+
+`Int` arguments are clamped to `Int32`'s range rather than trapping. A function whose only
+`int` is its result, such as `GetScreenWidth()`, still returns `Int32`: an overload that
+differed only in its result type would make `let width = GetScreenWidth()` ambiguous. Wrap
+it as `Int(GetScreenWidth())` where you need an `Int`.
 
 ```swift
 import Raylib
@@ -84,8 +91,9 @@ written by hand. `raylib-swift-gen` reads the vendored `raylib.h` and writes the
   camel-case name: `KEY_LEFT_SHIFT` becomes `leftShift`. Enums are imported open, so a
   value raylib adds later can't trap a `switch`.
 - **`Colors.swift`** holds raylib's color macros as `Color` constants.
-- **`TypedOverloads.swift`** has an overload for each function in the generator's table
-  (`Output.typedParameters`) that takes the Swift type where raylib takes an `int`.
+- **`Overloads.swift`** has an overload of each function that takes an `int`, taking
+  `Int` instead, or the Swift enum or option set for the parameters in the generator's
+  table (`Output.typedParameters`). An `int` result comes back as `Int`.
 
 The generator reads `raylib.h` directly instead of raylib's `raylib_api.json`, which
 isn't valid JSON in raylib 6.0. When the header changes in a way it doesn't expect (a

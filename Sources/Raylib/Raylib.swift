@@ -6,7 +6,7 @@
 // - Enums as Swift enums and option sets with camel-case cases (`KeyboardKey.space`,
 //   `ConfigFlags.msaa4xHint`), from the generated CRaylib.apinotes.
 // - The color macros as `Color` constants (`Color.rayWhite`), in Generated/Colors.swift.
-// - Overloads that take those types where raylib takes a plain `int`
-//   (`IsKeyDown(.space)`), in Generated/TypedOverloads.swift.
+// - Overloads that take `Int` where raylib takes a C `int`, and those types where the `int`
+//   holds an enum value (`IsKeyDown(.space)`), in Generated/Overloads.swift.
 
 @_exported import CRaylib

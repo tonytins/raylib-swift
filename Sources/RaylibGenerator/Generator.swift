@@ -10,8 +10,8 @@ public enum Generator {
         public static let apiNotes = "Sources/CRaylib/include/CRaylib.apinotes"
         /// The color constants.
         public static let colors = "Sources/Raylib/Generated/Colors.swift"
-        /// The typed overloads.
-        public static let typedOverloads = "Sources/Raylib/Generated/TypedOverloads.swift"
+        /// The Swift-typed overloads.
+        public static let overloads = "Sources/Raylib/Generated/Overloads.swift"
     }
 
     /// Renders every generated file from the header text, by path. Nothing is written.
@@ -20,7 +20,7 @@ public enum Generator {
         return [
             (Path.apiNotes, try Output.apiNotes(for: header)),
             (Path.colors, Output.colors(for: header)),
-            (Path.typedOverloads, try Output.typedOverloads(for: header)),
+            (Path.overloads, try Output.overloads(for: header)),
         ]
     }
 

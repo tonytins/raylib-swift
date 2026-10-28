@@ -47,3 +47,45 @@ import Testing
     #expect(image.format == Int32(PixelFormat.uncompressedGrayscale.rawValue))
     #expect(GetPixelDataSize(4, 2, .uncompressedGrayscale) == 8)
 }
+
+@Test func intOverloadsTakeAndReturnInt() {
+    // MeasureText needs the font a window loads, so this uses another int-to-int function.
+    let bound: Int = 7
+    let value: Int = GetRandomValue(bound, bound)
+    #expect(value == 7)
+
+    var image = GenImageColor(4, 2, .green)
+    defer { UnloadImage(image) }
+    let x: Int = 1
+    ImageDrawPixel(&image, x, 1, .red)
+    #expect(GetImageColor(image, x, 1) == .red)
+}
+
+@Test func intArgumentsClampInsteadOfTrapping() {
+    var image = GenImageColor(2, 2, .blue)
+    defer { UnloadImage(image) }
+    // Int.max doesn't fit an Int32; it clamps, lands off the image, and draws nothing.
+    ImageDrawPixel(&image, Int.max, 0, .red)
+    #expect(GetImageColor(image, 0, 0) == .blue)
+}
+
+@Test func typedOverloadsTakeIntForTheirOtherParameters() {
+    let gamepad: Int = 0
+    // No gamepad is connected in tests, so this reads as not pressed.
+    #expect(!IsGamepadButtonDown(gamepad, .leftFaceUp))
+}
+
+@Test func vectorOperatorsMatchRaymath() {
+    var a = Vector2(x: 1, y: 2)
+    let b = Vector2(x: 3, y: 4)
+    #expect(a + b == Vector2(x: 4, y: 6))
+    #expect(b - a == Vector2(x: 2, y: 2))
+    #expect(a * 2 == Vector2(x: 2, y: 4))
+    #expect(2 * a == a * 2)
+    #expect(b / 2 == Vector2(x: 1.5, y: 2))
+    #expect(-a == Vector2(x: -1, y: -2))
+    a += b
+    #expect(a == Vector2(x: 4, y: 6))
+    #expect(Vector2.zero + .one == .one)
+    #expect(Vector3.unitX + .unitY + .unitZ == .one)
+}

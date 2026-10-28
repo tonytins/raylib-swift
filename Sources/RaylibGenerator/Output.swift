@@ -93,9 +93,15 @@ public enum Output {
         """
     }
 
-    /// `TypedOverloads.swift`: overloads of the functions in ``typedParameters`` that take
-    /// the Swift enum or option set in place of its raw integer.
-    public static func typedOverloads(for header: RaylibHeader) throws(GeneratorError) -> String {
+    /// `Overloads.swift`: a Swift-typed overload of each function that takes an `int`.
+    ///
+    /// Each `int` parameter becomes `Int`, Swift's everyday integer, and an `int` result is
+    /// returned as `Int`; the parameters in ``typedParameters`` take their enum or option set
+    /// instead. A function whose only `int` is its result gets no overload, since overloads
+    /// that differ only by result type make plain `let x = F()` ambiguous. Neither do
+    /// variadic functions or ones with a type ``swiftType(for:in:isReturn:)`` can't spell;
+    /// the C function is always there as it is.
+    public static func overloads(for header: RaylibHeader) throws(GeneratorError) -> String {
         let enumNames = Set(header.enums.map(\.name))
         var byFunction: [String: [String: String]] = [:]
         for entry in typedParameters {
@@ -106,12 +112,19 @@ public enum Output {
         var body = ""
         var found: Set<String> = []
         for function in header.functions {
-            guard let typed = byFunction[function.name] else { continue }
-            for parameter in typed.keys.sorted() where !function.parameters.contains(where: { $0.name == parameter }) {
-                throw GeneratorError.unknownParameter(function: function.name, parameter: parameter)
+            if let typed = byFunction[function.name] {
+                for parameter in typed.keys.sorted() where !function.parameters.contains(where: { $0.name == parameter }) {
+                    throw GeneratorError.unknownParameter(function: function.name, parameter: parameter)
+                }
+                body += try overload(of: function, typed: typed)
+                found.insert(function.name)
+            } else if !function.isVariadic, function.parameters.contains(where: { $0.type == "int" }) {
+                do {
+                    body += try overload(of: function, typed: [:])
+                } catch {
+                    continue
+                }
             }
-            body += try overload(of: function, typed: typed)
-            found.insert(function.name)
         }
         for entry in typedParameters where !found.contains(entry.function) {
             throw GeneratorError.unknownParameter(function: entry.function, parameter: entry.parameter)
@@ -126,7 +139,7 @@ public enum Output {
         """
     }
 
-    private static func overload(of function: CFunction, typed: [String: String]) throws(GeneratorError) -> String {
+    static func overload(of function: CFunction, typed: [String: String]) throws(GeneratorError) -> String {
         var parameters: [String] = []
         var arguments: [String] = []
         for parameter in function.parameters {
@@ -135,22 +148,27 @@ public enum Output {
                 parameters.append("_ \(name): \(enumType)")
                 let integer = try swiftType(for: parameter.type, in: function.name, isReturn: false)
                 arguments.append("\(integer)(truncatingIfNeeded: \(name).rawValue)")
+            } else if parameter.type == "int" {
+                parameters.append("_ \(name): Int")
+                arguments.append("Int32(clamping: \(name))")
             } else {
                 parameters.append("_ \(name): \(try swiftType(for: parameter.type, in: function.name, isReturn: false))")
                 arguments.append(name)
             }
         }
-        let returnType = try swiftType(for: function.returnType, in: function.name, isReturn: true)
+        let call = "CRaylib.\(function.name)(\(arguments.joined(separator: ", ")))"
+        let returnsInt = function.returnType == "int"
+        let returnType = returnsInt ? "Int" : try swiftType(for: function.returnType, in: function.name, isReturn: true)
         let arrow = returnType == "Void" ? "" : " -> \(returnType)"
         let comment = function.comment.isEmpty ? function.name : function.comment
         let doc = comment.hasSuffix(".") ? comment : comment + "."
         return """
         /// \(doc)
         ///
-        /// Calls `\(function.name)` with the raw value of each typed argument.
+        /// Calls `\(function.name)` with `Int` arguments clamped to `Int32` and typed arguments' raw values.
         @inlinable
         public func \(function.name)(\(parameters.joined(separator: ", ")))\(arrow) {
-            CRaylib.\(function.name)(\(arguments.joined(separator: ", ")))
+            \(returnsInt ? "Int(\(call))" : call)
         }
 
 

@@ -108,7 +108,7 @@ func cTypesMapToSwift(cType: String, isReturn: Bool, expected: String) throws {
     // The sample lacks most of the table's functions, as a raylib release that renamed
     // them would; the generator must stop, not write a partial file.
     let header = try RaylibHeader(parsing: sampleHeader)
-    #expect(throws: GeneratorError.self) { try Output.typedOverloads(for: header) }
+    #expect(throws: GeneratorError.self) { try Output.overloads(for: header) }
 }
 
 @Test(arguments: [
@@ -130,4 +130,27 @@ func malformedHeadersThrow(text: String) {
         let onDisk = try String(contentsOf: root.appending(path: path), encoding: .utf8)
         #expect(onDisk == contents, "\(path) is out of date; run swift run raylib-swift-gen")
     }
+}
+
+@Test func intParametersGetIntOverloads() throws {
+    let header = try RaylibHeader(parsing: """
+    #define RAYLIB_VERSION "9.9"
+    RLAPI void InitWindow(int width, int height, const char *title);  // Initialize window
+    RLAPI int MeasureText(const char *text, int fontSize);           // Measure string width
+    RLAPI int GetScreenWidth(void);                                   // Get current screen width
+    RLAPI void TraceLog(int logLevel, const char *text, ...);         // Show trace log messages
+    RLAPI void LoadThing(char **names, int count);                    // A type the generator can't spell
+    """)
+    let functions = header.functions.filter { $0.name != "TraceLog" }
+    var output = ""
+    for function in functions {
+        guard function.parameters.contains(where: { $0.type == "int" }) else { continue }
+        if let rendered = try? Output.overload(of: function, typed: [:]) { output += rendered }
+    }
+    #expect(output.contains("public func InitWindow(_ width: Int, _ height: Int, _ title: UnsafePointer<CChar>) {"))
+    #expect(output.contains("CRaylib.InitWindow(Int32(clamping: width), Int32(clamping: height), title)"))
+    #expect(output.contains("public func MeasureText(_ text: UnsafePointer<CChar>, _ fontSize: Int) -> Int {"))
+    #expect(output.contains("Int(CRaylib.MeasureText(text, Int32(clamping: fontSize)))"))
+    #expect(!output.contains("GetScreenWidth"))
+    #expect(!output.contains("LoadThing"))
 }
