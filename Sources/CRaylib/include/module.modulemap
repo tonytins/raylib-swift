@@ -1,0 +1,4 @@
+module CRaylib {
+    header "CRaylib.h"
+    export *
+}

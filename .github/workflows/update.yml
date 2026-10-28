@@ -1,0 +1,72 @@
+name: Update raylib
+
+# Once a quarter (January, April, July, and October 1), vendors the newest raylib release that is at least 14 days old and opens a
+# pull request when it differs from RAYLIB_VERSION. The PR is only opened if the package
+# builds and its tests pass on Linux with the new release.
+
+on:
+  schedule:
+    - cron: "0 6 1 1,4,7,10 *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "raylib tag to vendor (blank: newest release at least 14 days old)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    container: swift:6.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools and headers
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends curl python3 ca-certificates \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Pick a release
+        id: pick
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUESTED: ${{ inputs.tag }}
+        run: |
+          tag="${REQUESTED:-$(scripts/pick-raylib-release.sh 14)}"
+          current="$(cat RAYLIB_VERSION)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$tag" = "$current" ]; then
+            echo "raylib $current is current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "raylib $current -> $tag"
+            echo "current=$current" >> "$GITHUB_OUTPUT"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Vendor and regenerate
+        if: steps.pick.outputs.changed == 'true'
+        run: scripts/update-raylib.sh "${{ steps.pick.outputs.tag }}"
+      - name: Build and test
+        if: steps.pick.outputs.changed == 'true'
+        run: swift build && swift test
+      - name: Open a pull request
+        if: steps.pick.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # GITHUB_TOKEN can open the PR, but GitHub doesn't run CI on PRs it opens.
+          # A RAYLIB_UPDATE_TOKEN secret (a fine-grained PAT) makes CI run on them too.
+          token: ${{ secrets.RAYLIB_UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: update/raylib-${{ steps.pick.outputs.tag }}
+          commit-message: Update raylib to ${{ steps.pick.outputs.tag }}
+          title: Update raylib to ${{ steps.pick.outputs.tag }}
+          body: |
+            Vendors raylib ${{ steps.pick.outputs.tag }} (was ${{ steps.pick.outputs.current }}) and regenerates the Swift layer.
+
+            Built and tested on Linux before this PR was opened. Before merging:
+
+            - Read raylib's [CHANGELOG](https://github.com/raysan5/raylib/blob/${{ steps.pick.outputs.tag }}/CHANGELOG) for API changes.
+            - Check that CI passes on macOS.
+            - Look over the diff of `Sources/Raylib/Generated` and `CRaylib.apinotes` for renamed cases.
