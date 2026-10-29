@@ -52,7 +52,7 @@ public struct RaylibHeader: Equatable, Sendable {
                 openEnum = []
             } else if line.hasPrefix("#define RAYLIB_VERSION ") {
                 version = try parseVersion(line, lineNumber: lineNumber)
-            } else if line.hasPrefix("#define "), line.contains("CLITERAL(Color)") {
+            } else if line.hasPrefix("#define "), line.range(of: "CLITERAL(Color)") != nil {
                 colors.append(try parseColor(line, lineNumber: lineNumber))
             } else if line.hasPrefix("RLAPI ") {
                 functions.append(try parseFunction(line, lineNumber: lineNumber))

@@ -29,7 +29,7 @@ public enum Generator {
     /// Everything is rendered before anything is written, so a header the generator can't
     /// read leaves the checkout as it was.
     public static func run(root: URL) throws(GeneratorError) -> [String] {
-        let headerURL = root.appending(path: Path.header)
+        let headerURL = root.appendingPathComponent(Path.header)
         let headerText: String
         do {
             headerText = try String(contentsOf: headerURL, encoding: .utf8)
@@ -39,7 +39,7 @@ public enum Generator {
 
         var changed: [String] = []
         for (path, contents) in try render(headerText: headerText) {
-            let url = root.appending(path: path)
+            let url = root.appendingPathComponent(path)
             if (try? String(contentsOf: url, encoding: .utf8)) == contents { continue }
             do {
                 try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

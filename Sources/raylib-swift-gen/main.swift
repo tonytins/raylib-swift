@@ -10,7 +10,7 @@ guard arguments.count <= 1 else {
     FileHandle.standardError.write(Data("usage: raylib-swift-gen [package-root]\n".utf8))
     exit(2)
 }
-let root = URL(filePath: arguments.first ?? FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+let root = URL(fileURLWithPath: arguments.first ?? FileManager.default.currentDirectoryPath, isDirectory: true)
 
 do {
     let changed = try Generator.run(root: root)

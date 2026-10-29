@@ -124,10 +124,10 @@ func malformedHeadersThrow(text: String) {
 /// The vendored raylib.h renders to exactly the checked-in files, so nobody edited them
 /// by hand and the generator is deterministic.
 @Test func checkedInFilesMatchTheVendoredHeader() throws {
-    let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    let header = try String(contentsOf: root.appending(path: Generator.Path.header), encoding: .utf8)
+    let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    let header = try String(contentsOf: root.appendingPathComponent(Generator.Path.header), encoding: .utf8)
     for (path, contents) in try Generator.render(headerText: header) {
-        let onDisk = try String(contentsOf: root.appending(path: path), encoding: .utf8)
+        let onDisk = try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
         #expect(onDisk == contents, "\(path) is out of date; run swift run raylib-swift-gen")
     }
 }
