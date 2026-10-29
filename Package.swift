@@ -26,6 +26,9 @@ let package = Package(
                 // Empty, as GLFW's posix_poll.c defines it, so the two definitions agree.
                 .define("_GNU_SOURCE", to: "", .when(platforms: [.linux])),
                 .define("_GLFW_X11", .when(platforms: [.linux])),
+                // GLFW's Cocoa backend manages memory by hand (release, dealloc), but SwiftPM
+                // compiles Objective-C with ARC; this turns it off again for glfw.m.
+                .unsafeFlags(["-fno-objc-arc"], .when(platforms: [.macOS])),
             ],
             linkerSettings: [
                 .linkedLibrary("m", .when(platforms: [.linux])),

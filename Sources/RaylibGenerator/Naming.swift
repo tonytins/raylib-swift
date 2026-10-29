@@ -43,7 +43,7 @@ public enum Naming {
         let lower = macro.lowercased()
         for modifier in ["light", "dark", "sky", "ray"] where lower.hasPrefix(modifier) && lower.count > modifier.count {
             let rest = lower.dropFirst(modifier.count)
-            return modifier + rest.prefix(1).uppercased() + rest.dropFirst()
+            return modifier + rest.prefix(1).uppercased() + String(rest.dropFirst())
         }
         return lower
     }
